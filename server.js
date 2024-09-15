@@ -45,26 +45,25 @@ app.get('/test-db', async (req, res) => {
 
   const secret = 'your_jwt_secret';
 
-  app.post('/register', async (req, res) => {
-    const { username, password } = req.body;
-    try {
-        console.log('Received registration request for username:', username);
-        const hashedPassword = await bcrypt.hash(password, 10);
-        console.log('Hashed password:', hashedPassword);
+app.post('/register', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+      console.log('Received registration request for username:', username);
+      const hashedPassword = await bcrypt.hash(password, 10);
+      console.log('Hashed password:', hashedPassword);
 
-        const result = await pool.query(
-            'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *',
-            [username, hashedPassword]
-        );
-        console.log('User created:', result.rows[0]);
+      const result = await pool.query(
+          'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *',
+          [username, hashedPassword]
+      );
+      console.log('User created:', result.rows[0]);
 
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('Error during registration:', err);
-        res.status(500).send('User already exists or other error');
-    }
+      res.status(201).json(result.rows[0]);
+  } catch (err) {
+      console.error('Error during registration:', err);
+      res.status(500).send('User already exists or other error');
+  }
 });
-
 
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
@@ -82,9 +81,29 @@ app.post('/login', async (req, res) => {
       }
       const token = jwt.sign({ id: user.id }, secret, { expiresIn: '1h' });
       console.log('Token generated:', token);
-      res.json({ token });
+      res.json({ token, teamid:user.teamid });
   } catch (err) {
       console.error('Error logging in:', err);
       res.status(500).send('Error logging in');
+  }
+});
+
+app.post('/insert-teamid', async (req, res) => {
+  const { username, teamId } = req.body;
+
+  try {
+    const result = await pool.query(
+      'UPDATE users SET teamid = $1 WHERE username = $2 RETURNING *', 
+      [teamId, username]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({ message: 'Team ID updated successfully', user: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating Team ID:', error);
+    res.status(500).json({ message: 'Error updating Team ID' });
   }
 });
