@@ -1,0 +1,13 @@
+# Ignorowanie katalogu node_modules
+node_modules/
+
+# Ignorowanie pliku środowiskowego
+.env
+
+# Ignorowanie logów
+logs/
+*.log
+
+# Ignorowanie plików build
+build/
+dist/

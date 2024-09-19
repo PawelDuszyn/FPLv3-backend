@@ -111,27 +111,17 @@ app.post('/insert-teamid', async (req, res) => {
 
     try {
         const response = await fetch(
-            `https://fantasy.premierleague.com/api/entry/${teamId}/`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'aplication/json'
-                },
-                body: JSON.stringify({username, teamId})
-            }
-        );
+            `https://fantasy.premierleague.com/api/entry/${teamId}/`);
         try {
             const result = await pool.query(
                 'UPDATE users SET teamid = $1 WHERE username = $2 RETURNING *',
                 [teamId, username]
             );
-
             if (result.rowCount === 0) {
                 return res
                     .status(404)
                     .json({message: 'User not found'});
             }
-
             res
                 .status(200)
                 .json({message: 'Team ID updated successfully', user: result.rows[0]});
@@ -145,3 +135,30 @@ app.post('/insert-teamid', async (req, res) => {
         setErrorMessage('Error saving Team ID');
     }
 });
+
+app.post('/get-user-team', async (req, res) => {
+    const {username, teamId} = req.body; 
+    
+    try {
+        const responseCurrentEvent = await fetch(`https://fantasy.premierleague.com/api/entry/${teamId}/`);
+        const fplDataCurrentEvent = await responseCurrentEvent.json();
+        const currentEvent = fplDataCurrentEvent.current_event;
+        const response = await fetch(`https://fantasy.premierleague.com/api/entry/${teamId}/event/${currentEvent}/picks/`);
+        const fplData = await response.json();
+        const result = await pool.query(
+            'UPDATE users SET teamdata = $1 WHERE username = $2 RETURNING *', [fplData.picks, username]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({message: 'User not found'});
+        }
+        res.status(200).json({
+            message: 'FPL Team Data fetched and saved successfully',
+            user: result.rows[0],
+            fplData
+        });
+    } catch (error) {
+        console.error('Error fetching FPL team data:', error);
+        res.status(500).json({ message: 'Error fetching FPL team data' });
+    }
+});
+
